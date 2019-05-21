@@ -10,7 +10,11 @@
 # Импорт всех необходимых библиотек. Их имена идут после команды "import".
 # Должны быть установлены на аппарате, из-под которого расчехляется скрипт
 from pptx import Presentation
-from pptx.util import Inches
+from pptx.util import Inches, Pt
+from pptx.dml.color import RGBColor
+from pptx.enum.text import MSO_AUTO_SIZE
+
+import os
 
 from io import BytesIO
 
@@ -18,14 +22,14 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 ##############################################
-template = pd.read_excel(r'W:/Docs/Plot_plan.xls', 'Sheet1', header = 1)
+path0 = os.getcwd()
+path_to_template = path0 + "\\Plot_zapil_TRF.xls"
 
-calc_1 = pd.read_excel(template.iloc[0,0], template.iloc[0,1], index_col = int(template.iloc[0,2]), header = int(template.iloc[0,3]))
-calc_2 = pd.read_excel(template.iloc[1,0], template.iloc[1,1], index_col = int(template.iloc[1,2]), header = int(template.iloc[1,3]))
-ecart_c1c2 = calc_1 - calc_2
+template = pd.read_excel(path_to_template, 'Sheet1', header = 1)
+
+calc_1_ind_define = pd.read_excel(template.iloc[0,0], template.iloc[0,1], index_col = int(template.iloc[0,9]), header = int(template.iloc[0,10]))
 
 start_row_ind = 0
-
 ##############################################
 prs = Presentation(template.iloc[0,30])
 left = Inches(0.2)
@@ -61,31 +65,34 @@ border_x_plot_3_right = 0.0
 
 if len(zoom_list) == 3 :
     
-    for ind in calc_1.index :
+    for ind in calc_1_ind_define.index :
         if zoom_list[0][1] <= ind :
             border_x_plot_1_right = ind
             break
     
-    for ind in calc_1.index :
+    for ind in calc_1_ind_define.index :
         if zoom_list[1][0] >= ind :
             border_x_plot_2_left = ind
     
-    for ind in calc_1.index :
+    for ind in calc_1_ind_define.index :
         if zoom_list[1][1] <= ind :
             border_x_plot_2_right = ind
             break
 
-    for ind in calc_1.index :
+    for ind in calc_1_ind_define.index :
         if zoom_list[2][0] >= ind :
             border_x_plot_3_left = ind
 
-    for ind in calc_1.index :
+    for ind in calc_1_ind_define.index :
         if zoom_list[2][1] <= ind :
             border_x_plot_3_right = ind
             break
 
 ##############################################    
 for i in template.iloc[0::,4] :
+    calc_1 = pd.read_excel(template.iloc[start_row_ind,0], template.iloc[start_row_ind,1], index_col = int(template.iloc[0,9]), header = int(template.iloc[0,10]))
+    calc_2 = pd.read_excel(template.iloc[start_row_ind,2], template.iloc[start_row_ind,3], index_col = int(template.iloc[1,9]), header = int(template.iloc[1,10]))
+    ecart_c1c2 = calc_1 - calc_2
     
     image_stream = BytesIO() 
     slide = prs.slides[template.iloc[start_row_ind,31] + 1]
@@ -165,32 +172,50 @@ for i in template.iloc[0::,4] :
     fig.savefig(image_stream)
     pic = slide.shapes.add_picture(image_stream, left, top, width, height)
 #################Запиливание таблицы экартов по контрольным точкам
-    tab_x, tab_y, tab_cx, tab_cy = Inches(4.9), Inches(0.1), Inches(5), Inches(1)
+    tab_x, tab_y, tab_cx, tab_cy = Inches(7), Inches(0.1), Inches(0.5)*len(template.iloc[1,5]), Inches(0.2)
     shape = slide.shapes.add_table(4, control_point_counter + 1, tab_x, tab_y, tab_cx, tab_cy)
     table = shape.table
 
     cell = table.cell(1, 0)
-    cell.text = template.iloc[0,5]
-    cell = table.cell(2, 0)
-    cell.text = template.iloc[1,5]
-    cell = table.cell(3, 0)
-    cell.text = "Écart"
+    cell.fill.solid()
+    cell.fill.fore_color.rgb = RGBColor(176,196,222)
+    cell.text_frame.text = template.iloc[0,5]
+    cell.text_frame._set_font("Calibri", size = 12, bold = True, italic = True)    
 
+    cell = table.cell(2, 0)
+    cell.fill.solid()
+    cell.fill.fore_color.rgb = RGBColor(176,196,222)
+    cell.text_frame.text = template.iloc[1,5]
+    cell.text_frame._set_font("Calibri", size = 12, bold = True, italic = True)
+    
+    cell = table.cell(3, 0)
+    cell.fill.solid()
+    cell.fill.fore_color.rgb = RGBColor(176,196,222)
+    cell.text_frame.text = "Écart"
+    cell.text_frame._set_font("Calibri", size = 12, bold = True, italic = True)
+    
     row_counter = 1
     column_counter = 1
     for control_point in template.iloc[0:,22] :
         if str(control_point) != "nan" :
-            cell = table.cell(row_counter, column_counter)
-            cell.text = str(calc_1[i][control_point])
-        
             cell = table.cell(row_counter-1, column_counter)
-            cell.text = str(control_point)    
+            cell.fill.solid()
+            cell.fill.fore_color.rgb = RGBColor(224,224,224)
+            cell.text_frame.text = str(control_point)
+            cell.text_frame._set_font("Calibri", size = 12, bold = True, italic = False)
+            
+            cell = table.cell(row_counter, column_counter)
+            cell.text_frame.text = str(calc_1[i][control_point])
+            cell.text_frame._set_font("Calibri", size = 10, bold = False, italic = False)                
     
             cell = table.cell(row_counter+1, column_counter)
-            cell.text = str(calc_2[i][control_point])
+            cell.text_frame.text = str(calc_2[i][control_point])
+            cell.text_frame._set_font("Calibri", size = 10, bold = False, italic = False)    
     
             cell = table.cell(row_counter+2, column_counter)
-            cell.text = str(round(calc_1[i][control_point]-calc_2[i][control_point], 1))
+            cell.text_frame.text = str(round(calc_1[i][control_point]-calc_2[i][control_point], 1))
+            cell.text_frame._set_font("Calibri", size = 10, bold = False, italic = False)          
+
             column_counter +=1
 ##################################################################
 prs.save(template.iloc[0,30][:-5]+"_after_zapil.pptx")
